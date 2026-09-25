@@ -1,0 +1,3 @@
+import pino from 'pino';
+export function createLogger() { return pino({ level: process.env.LOG_LEVEL ?? 'info', base: null, serializers: { instanceId: value => value } }); }
+export function instanceLog(logger, instanceId) { return { info: (obj, msg) => logger.info({ instanceId, ...(typeof obj === 'object' ? obj : {}) }, typeof obj === 'string' ? obj : msg), warn: (obj, msg) => logger.warn({ instanceId, ...(typeof obj === 'object' ? obj : {}) }, typeof obj === 'string' ? obj : msg), error: (obj, msg) => logger.error({ instanceId, ...(typeof obj === 'object' ? obj : {}) }, typeof obj === 'string' ? obj : msg) }; }
