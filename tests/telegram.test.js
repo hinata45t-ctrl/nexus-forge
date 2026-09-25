@@ -1,12 +1,72 @@
-import test from 'node:test';
-import assert from 'node:assert/strict';
-import os from 'node:os';
-import path from 'node:path';
-import fs from 'node:fs/promises';
-import { TelegramUserStore } from '../src/telegram/userStore.js';
-import { ConversationStore } from '../src/telegram/conversationStore.js';
-import { normalizePhone, validPrefix } from '../src/telegram/telegramUtils.js';
+# Nexus Forge
 
-test('Telegram users and ownership are isolated', async () => { const root = await fs.mkdtemp(path.join(os.tmpdir(), 'nf-users-')); const users = new TelegramUserStore(root); await users.createUser(111111111); await users.createUser(222222222); await users.addInstanceToUser(111111111, 'nf_A'); await users.addInstanceToUser(222222222, 'nf_B'); assert.equal(await users.ownsInstance(111111111, 'nf_A'), true); assert.equal(await users.ownsInstance(111111111, 'nf_B'), false); assert.equal(await users.ownsInstance(222222222, 'nf_B'), true); });
-test('creation conversations are independent and cancellable', async () => { const root = await fs.mkdtemp(path.join(os.tmpdir(), 'nf-conversations-')); const conversations = new ConversationStore({ rootDir: root, ttlMs: 100 }); const a = await conversations.start(111111111); const b = await conversations.start(222222222); assert.notEqual(a.creationId, b.creationId); conversations.update(111111111, { step: 'photo' }); assert.equal(conversations.get(111111111).step, 'photo'); await conversations.cancel(111111111); assert.equal(conversations.get(111111111), null); await new Promise(resolve => setTimeout(resolve, 130)); assert.equal(conversations.get(222222222), null); });
-test('Telegram input validation normalizes numbers and prefixes', () => { assert.equal(normalizePhone('+226 11-11-1111'), '22611111111'); assert.equal(validPrefix('!'), true); assert.equal(validPrefix('bad prefix'), false); assert.throws(() => normalizePhone('not-a-phone')); });
+Nexus Forge is a modular multi-instance WhatsApp core with a Telegram control layer. The project keeps the Telegram interface separate from the actual WhatsApp logic and uses the Core API only.
+
+## Architecture
+
+- `src/core`: multi-instance lifecycle, configuration, and storage
+- `src/whatsapp`: Baileys sockets, session isolation, and message handling
+- `src/telegram`: Telegram manager and guided creation flow
+- `src/commands`: command system for WhatsApp bot instances
+- `instances/<instanceId>`: isolated runtime folder for each bot
+
+## Installation
+
+```bash
+npm install
+cp .env.example .env
+npm test
+npm start
+```
+
+## Environment
+
+The following variables are expected in `.env`:
+
+- `NODE_ENV`
+- `LOG_LEVEL`
+- `SESSION_ENCRYPTION_KEY`
+- `TELEGRAM_BOT_TOKEN`
+- `NEXUS_ADMIN_IDS`
+
+Never commit real credentials or tokens.
+
+## WhatsApp pairing flow
+
+1. The Telegram user creates a bot instance.
+2. The instance keeps `ownerNumber` and `botPhoneNumber` separate.
+3. The Telegram manager calls the Core `startBot` and `pairBot` functions.
+4. Baileys generates a temporary pairing code for the bot account.
+5. The user enters the code in the target WhatsApp account.
+6. The instance becomes `connected` and can answer simple commands.
+
+## Core API used by Telegram
+
+- `createBot()`
+- `getBot()`
+- `listBots()`
+- `startBot()`
+- `stopBot()`
+- `restartBot()`
+- `deleteBot()`
+- `getBotStatus()`
+- `pairBot()`
+- `setMenuImage()`
+
+## Available WhatsApp commands
+
+- `!ping`
+- `!menu`
+- `!owner`
+- `!help`
+
+## Security
+
+- User ownership is checked server-side before any bot action.
+- Session files are never shared across instances.
+- Secrets stay in `.env`, never inside instance JSON files.
+- User IDs are used for Telegram ownership checks, not display names or usernames.
+
+## Notes
+
+This phase focuses on real Baileys connection, pairing, status tracking, and minimal WhatsApp command execution. Telegram is an interface over the Core; it does not replace the Core.
