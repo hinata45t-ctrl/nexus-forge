@@ -1,15 +1,8 @@
 # Nexus Forge
 
-Nexus Forge is a clean, modular core for managing independent WhatsApp bot instances with Node.js and Baileys. Each instance has its own configuration, socket, session, assets, data, and logs.
+Nexus Forge is a modular multi-instance WhatsApp core with **NexusForgeManagerBot**, a Telegram control interface. Telegram calls the existing Core API; it does not contain WhatsApp business logic.
 
-> Telegram is intentionally **not integrated yet**. The core exposes a clean internal API for the future `NexusForgeManagerBot`.
-
-## Requirements
-
-- Node.js 20+
-- A Linux server is recommended for production
-
-## Installation
+## Installation and configuration
 
 ```bash
 npm install
@@ -18,45 +11,50 @@ npm test
 npm start
 ```
 
-Starting the application only initializes the core; it does not create or connect instances automatically.
+Set these values in `.env` locally:
+
+- `TELEGRAM_BOT_TOKEN`: token supplied by BotFather. Never commit or log it.
+- `NEXUS_ADMIN_IDS`: optional comma-separated Telegram user IDs for future administration.
+- `LOG_LEVEL`, `NODE_ENV`, and the existing Core session settings.
+
+If `TELEGRAM_BOT_TOKEN` is absent, the Core starts without launching Telegram.
+
+## Telegram flow
+
+`/start` opens the main menu. **Créer un bot** starts a per-user, expiring conversation:
+
+1. bot name
+2. menu photo or `/skip`
+3. owner name
+4. owner number
+5. bot number (kept separate)
+6. developer name
+7. prefix
+8. public mode (private mode is reserved for the next UI iteration)
+9. summary and confirmation
+
+The Core instance is created only after confirmation. Temporary photos live under `tmp/telegram/<telegramUserId>/<creationId>/`; ownership is recorded separately under `telegram-data/users.json`. The photo is transferred only after instance creation.
 
 ## Architecture
 
-- `src/core`: instance lifecycle, configuration, runtime, and logging
-- `src/whatsapp`: one Baileys socket and session per instance
-- `src/commands`: isolated, prefix-aware command system
-- `src/storage`: filesystem abstraction and instance paths
-- `instances/<id>`: isolated runtime data for every bot
-- `tests`: automated unit/integration tests using Node's built-in test runner
+- `src/core`: existing lifecycle and configuration API
+- `src/whatsapp`: existing Baileys sockets and sessions
+- `src/telegram/bot.js`: Telegraf wiring and handlers
+- `src/telegram/userStore.js`: Telegram ID to instance ownership
+- `src/telegram/conversationStore.js`: isolated, expiring creation state
+- `src/telegram/telegramUtils.js`: validation, photo handling, safe status output
 
-## Internal API
-
-`src/index.js` exports `createNexusForge()`, which provides:
-
-```js
-const forge = createNexusForge();
-const bot = await forge.createBot({
-  botName: 'Alpha',
-  ownerName: 'Baki',
-  ownerNumber: '22611111111',
-  developerName: 'Baki',
-  prefix: '!',
-});
-
-await forge.startBot(bot.instanceId);
-await forge.pairBot(bot.instanceId, '22611111111');
-```
-
-Available operations: `createBot`, `getBot`, `listBots`, `updateBot`, `startBot`, `stopBot`, `restartBot`, `deleteBot`, `getBotStatus`, and `pairBot`.
-
-## Commands
-
-The initial WhatsApp commands are `ping`, `menu`, `owner`, and `help`. Every command executes with a context containing `instanceId`, `config`, `socket`, `message`, `sender`, `chat`, and `prefix`.
+The manager uses `createInstance`, `getInstance`, `setMenuImage`, `startInstance`, `stopInstance`, `restartInstance`, `deleteInstance`, and `getInstanceStatus` from the Core. It does not recreate or replace the Core.
 
 ## Security
 
-Secrets belong in `.env`, never in an instance's `config.json`. WhatsApp sessions, logs, and runtime data are ignored by Git. Do not commit pairing credentials.
+Ownership is checked server-side for every management callback. Telegram usernames are never used as identity. Callback IDs are not trusted. User-facing errors are generic while technical details go to instance-aware logs. Temporary files use generated names and are removed on cancellation or expiration. Runtime Telegram data and credentials are ignored by Git.
 
-## Future work
+## Available commands
 
-Telegram will be added as a separate control interface above this core. Payments, subscriptions, Telegram handlers, keyboards, and databases are deliberately out of scope for this first stage.
+- `/start`
+- `/cancel`
+- `/skip` during photo selection
+- Inline buttons for creation, listing, starting, stopping, restarting, status, and deletion
+
+Telegram administration, pairing UX, configuration editing, logs UI, payments, subscriptions, and web interfaces are intentionally out of scope for this phase.

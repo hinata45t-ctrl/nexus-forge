@@ -1,7 +1,7 @@
 {
   "name": "nexus-forge",
-  "version": "0.1.0",
-  "description": "Modular multi-instance WhatsApp bot core built with Node.js and Baileys.",
+  "version": "0.2.0",
+  "description": "Modular multi-instance WhatsApp bot core and Telegram manager.",
   "type": "module",
   "main": "src/index.js",
   "scripts": {
@@ -9,12 +9,11 @@
     "test": "node --test",
     "test:watch": "node --test --watch"
   },
-  "engines": {
-    "node": ">=20"
-  },
+  "engines": { "node": ">=20" },
   "dependencies": {
     "@whiskeysockets/baileys": "^6.7.18",
     "dotenv": "^16.4.7",
-    "pino": "^9.6.0"
+    "pino": "^9.6.0",
+    "telegraf": "^4.16.3"
   }
 }

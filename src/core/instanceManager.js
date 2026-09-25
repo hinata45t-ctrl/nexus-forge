@@ -15,7 +15,6 @@ export function createNexusForge(options = {}) {
   const whatsapp = options.whatsapp ?? new WhatsAppManager({ store, runtime, logger });
   const commands = new CommandManager({ logger });
   registerBuiltins(commands);
-
   const createInstance = async (input) => {
     const instanceId = input.instanceId ?? `nf_${crypto.randomUUID()}`;
     const normalized = config.validateConfig({ ...input, instanceId });
@@ -33,15 +32,10 @@ export function createNexusForge(options = {}) {
   const restartInstance = (id) => whatsapp.restart(id);
   const getInstanceStatus = (id) => runtime.get(id) ?? 'created';
   const getInstanceConfig = (id) => config.getConfig(id);
-  const api = { createInstance, getInstance, listInstances, updateInstance, deleteInstance, startInstance, stopInstance, restartInstance, getInstanceStatus, getInstanceConfig, whatsapp, commands, logger };
-
-  return { ...api,
-    createBot: createInstance, getBot: getInstance, listBots: listInstances, updateBot: updateInstance,
-    startBot: startInstance, stopBot: stopInstance, restartBot: restartInstance, deleteBot: deleteInstance,
-    getBotStatus: getInstanceStatus, pairBot: (id, phone) => whatsapp.requestPairingCode(id, phone)
-  };
+  const setMenuImage = (id, imagePath) => config.setMenuImage(id, imagePath);
+  const api = { createInstance, getInstance, listInstances, updateInstance, deleteInstance, startInstance, stopInstance, restartInstance, getInstanceStatus, getInstanceConfig, setMenuImage, config, store, whatsapp, commands, logger };
+  return { ...api, createBot: createInstance, getBot: getInstance, listBots: listInstances, updateBot: updateInstance, startBot: startInstance, stopBot: stopInstance, restartBot: restartInstance, deleteBot: deleteInstance, getBotStatus: getInstanceStatus, pairBot: (id, phone) => whatsapp.requestPairingCode(id, phone) };
 }
-
 export { InstanceStore } from './instanceStore.js';
 export { InstanceConfig } from './instanceConfig.js';
 export { InstanceRuntime } from './instanceRuntime.js';
