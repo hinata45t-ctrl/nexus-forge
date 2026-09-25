@@ -1,13 +1,10 @@
-import { CommandRegistry } from './commandRegistry.js';
-import { CommandLoader } from './commandLoader.js';
-import { CommandExecutor } from './commandExecutor.js';
-import { PermissionManager } from './permissionManager.js';
+import { createCommandEngine } from '../command-engine/index.js';
+import { registerCoreCommands } from '../commands/core/register.js';
+import { registerNonIaCommands } from '../commands/nonIa/index.js';
 
-export function createCommandEngine({ logger } = {}) {
-  const registry = new CommandRegistry();
-  const permissionManager = new PermissionManager();
-  const loader = new CommandLoader({ registry, logger });
-  const executor = new CommandExecutor({ registry, permissionManager, logger });
-
-  return { registry, loader, executor, permissionManager };
+export function createWhatsAppCommandSystem({ logger } = {}) {
+  const engine = createCommandEngine({ logger });
+  registerCoreCommands(engine.registry, logger);
+  registerNonIaCommands(engine.registry, logger);
+  return engine;
 }
